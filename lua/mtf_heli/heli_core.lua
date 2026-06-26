@@ -62,6 +62,7 @@ function MTFHeli.Cleanup()
     hook.Remove("EntityEmitSound", "MTFHeliBotMute")
 
     MTFHeli.Sound.Cleanup()
+    MTFHeli.Sound.GetActivePlayers = nil
     activePlayers = {}
     pendingBots = {}
 
@@ -78,21 +79,29 @@ end
 local function DoDisembark()
     if #activePlayers == 0 then return end
 
+    local spawned = 0
     for idx, data in ipairs(activePlayers) do
         local p = data.player
         if not IsValid(p) then continue end
 
-        -- Вызываем колбэк адаптера (Breach: SetupNormal + ApplyRoleStats + Give)
+        local ok = false
         if MTFHeli.SpawnPlayer then
-            MTFHeli.SpawnPlayer(p, data.role)
+            ok = MTFHeli.SpawnPlayer(p, data.role)
         end
 
-        local offset = cfg.DisembarkOffsets[((idx - 1) % #cfg.DisembarkOffsets) + 1]
+        if not ok then continue end
+
+        local offset = cfg.DisembarkOffsets[((spawned) % #cfg.DisembarkOffsets) + 1]
         local groundPos = FindGround(cfg.HoverPos + offset)
 
         p:SetPos(groundPos)
         p:SetVelocity(Vector(0, 0, 0))
         p:SetEyeAngles(Angle(0, math.random(0, 360), 0))
+        spawned = spawned + 1
+    end
+
+    if spawned > 0 then
+        MTFHeli.Sound.RestartLoops()
     end
 end
 
@@ -201,6 +210,9 @@ function MTFHeli.RunSequence(ply, players)
 
     activePlayers = players or {}
 
+    -- Ссылка для звукового фильтра
+    MTFHeli.Sound.GetActivePlayers = function() return activePlayers end
+
     -- Создание сущности вертолёта
     local heli = ents.Create("mtf_heli")
     if not IsValid(heli) then
@@ -235,11 +247,7 @@ function MTFHeli.RunSequence(ply, players)
     timer.Simple(cfg.NotifyDelay, function()
         if not IsValid(activeHeli) then return end
         if not activePlayers or #activePlayers == 0 then return end
-        for _, p in ipairs(player.GetAll()) do
-            if IsValid(p) then
-                p:EmitSound("mtf_enter")
-            end
-        end
+        MTFHeli.Sound.PlayNotification()
     end)
 
     -- Спавн игроков (канат опустился)

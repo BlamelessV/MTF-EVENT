@@ -14,7 +14,6 @@ local cfg = MTFHeli.Config
 MTFHeli.SpawnPlayer = function(ply, roleData)
     if not IsValid(ply) then return false end
 
-    -- Только для наблюдателей (спектаторов)
     if ply:GTeam() ~= TEAM_SPECTATOR then return false end
 
     ply:UnSpectate()
@@ -27,9 +26,15 @@ MTFHeli.SpawnPlayer = function(ply, roleData)
     ply.canblink = true
     ply:UnIgnitePlayer()
 
-    -- Применение статистики роли (оружие, здоровье и т.д.)
-    if roleData and roleData.role then
-        ply:ApplyRoleStats(roleData.role)
+    if roleData then
+        ply:ApplyRoleStats(roleData)
+    end
+
+    if SCPCB_Inv_SetPlayerRole then
+        local nclass = ply.GetNClass and ply:GetNClass() or nil
+        if nclass then
+            SCPCB_Inv_SetPlayerRole(ply, nclass)
+        end
     end
 
     return true
