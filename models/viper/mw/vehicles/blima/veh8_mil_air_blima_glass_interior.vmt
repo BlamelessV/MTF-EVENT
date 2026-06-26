@@ -1,0 +1,15 @@
+"VertexLitGeneric"
+{
+	$basetexture			"viper/mw/vehicles/blima/veh8_mil_air_blima_glass_c"
+	$bumpmap				"viper/mw/vehicles/blima/veh8_mil_air_blima_glass_n"
+
+	$envmap	"env_cubemap"
+	"$envmaptint"	"0.4"
+	$envmapfresnel	"1"
+	"$color2"	"[.0 .0 .0]"
+                $translucent "0"
+
+	"$halflambert" "1"
+	"$ambientocclusion" "1"
+	"$nocull" "0"
+}
