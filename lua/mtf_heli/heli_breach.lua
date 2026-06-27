@@ -75,6 +75,26 @@ hook.Add("MTFSpawn", "MTFHeli_SpawnSupport", function(players)
 end)
 
 -- ============================================================
+-- Хук: перехват спавна Chaos, чтобы не сажать их на площадку МОГ
+-- ============================================================
+
+hook.Add("CIChaosSpawn", "MTFHeli_ChaosRedirect", function(data)
+    if not data or #data == 0 then return end
+    if not SPAWN_CHAOSINS or #SPAWN_CHAOSINS == 0 then return end
+
+    for i, d in ipairs(data) do
+        if IsValid(d.player) then
+            d.player:SetupNormal()
+            d.player:ApplyRoleStats(d.role)
+            local spawnPos = SPAWN_CHAOSINS[((i - 1) % #SPAWN_CHAOSINS) + 1]
+            d.player:SetPos(spawnPos)
+        end
+    end
+
+    return true
+end)
+
+-- ============================================================
 -- Команда: mtf_spawn_support <число>
 -- Создаёт вертолёт с ботами (только для админов)
 -- ============================================================

@@ -36,6 +36,14 @@ MTFHeli.Config = {
     BotFireInterval = 0.1,      -- Интервал стрельбы (секунды)
     BotSpawnResetDelay = 0,     -- Таймер повторной установки позиции бота (тики)
 
+    -- Канат (bodygroup модели heli.mdl)
+    RopeDetachDelay = 9,        -- Задержка после высадки перед отцеплением каната
+
+    -- Боец, отцепляющий канат
+    RopeSoldierModel = "models/hh/veh/guy03.mdl",
+    RopeSoldierOffset = Vector(73.1, -40.8, 15),
+    RopeSoldierSpawnPos = Vector(73.1, -40.8, 15),
+
     -- Звуки: дистанция отключения при вылете
     DepartSoundCutoff = 3000,
 

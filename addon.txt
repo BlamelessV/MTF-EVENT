@@ -1,0 +1,6 @@
+{
+    "title": "MTF EVENT",
+    "type": "serverContent",
+    "tags": ["roleplay", "scifi", "fun"],
+    "ignore": []
+}

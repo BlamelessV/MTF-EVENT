@@ -7,6 +7,7 @@ local cfg = MTFHeli.Config
 
 -- Ссылки на активное состояние
 local activeHeli = nil
+local activeRopeSoldier = nil
 local activePlayers = {}
 local pendingBots = {}
 
@@ -66,10 +67,43 @@ function MTFHeli.Cleanup()
     activePlayers = {}
     pendingBots = {}
 
+    if IsValid(activeRopeSoldier) then
+        activeRopeSoldier:Remove()
+        activeRopeSoldier = nil
+    end
+
     if IsValid(activeHeli) then
         activeHeli:Remove()
         activeHeli = nil
     end
+end
+
+-- ============================================================
+-- Боец на канате (prop_dynamic → NPC при спуске)
+-- ============================================================
+
+local function SpawnRopeSoldier(heli)
+    if IsValid(activeRopeSoldier) then
+        activeRopeSoldier:Remove()
+    end
+
+    local soldier = ents.Create("prop_dynamic")
+    if not IsValid(soldier) then return end
+
+    soldier:SetModel(cfg.RopeSoldierModel)
+    soldier:SetPos(heli:GetPos())
+    soldier:SetAngles(heli:GetAngles())
+    soldier:SetParent(heli)
+    soldier:Spawn()
+    soldier:Activate()
+
+    activeRopeSoldier = soldier
+end
+
+local function DropRopeSoldier()
+    if not IsValid(activeRopeSoldier) then return end
+    activeRopeSoldier:Remove()
+    activeRopeSoldier = nil
 end
 
 -- ============================================================
@@ -206,7 +240,9 @@ end
 -- ============================================================
 
 function MTFHeli.RunSequence(ply, players)
+    local savedBots = pendingBots
     MTFHeli.Cleanup()
+    pendingBots = savedBots
 
     activePlayers = players or {}
 
@@ -238,6 +274,9 @@ function MTFHeli.RunSequence(ply, players)
     activeHeli = heli
     MTFHeli.Sound.activeHeli = heli
 
+    -- Боец на канате
+    SpawnRopeSoldier(heli)
+
     -- Петлевые звуки ротора
     MTFHeli.Sound.PlayLoop("heli_rotor", 1.0)
     MTFHeli.Sound.PlayLoop("heli_rotor_close", 0.7)
@@ -255,6 +294,13 @@ function MTFHeli.RunSequence(ply, players)
         DoDisembark()
     end)
 
+    -- Звук отцепления каната за 2 сек до исчезновения
+    timer.Simple(math.max(0, cfg.HoldTime - cfg.RopeDetachDelay - 2), function()
+        if IsValid(activeHeli) then
+            MTFHeli.Sound.PlayOneShot("heli_rope")
+        end
+    end)
+
     -- Спавн ботов
     CreateBots()
 
@@ -263,6 +309,7 @@ function MTFHeli.RunSequence(ply, players)
     local exitPos = cfg.HoverPos + exitAngle:Forward() * cfg.ExitOffset.y + Vector(0, 0, cfg.ExitOffset.z)
     local holdStartTime = CurTime()
     local departStartTime = nil
+    local ropeDetached = false
 
     hook.Add("Think", "MTFHeliFlight", function()
         if not IsValid(activeHeli) then
@@ -275,12 +322,28 @@ function MTFHeli.RunSequence(ply, players)
         MTFHeli.Sound.UpdateFilter()
 
         if holdElapsed < cfg.HoldTime then
-            -- Фаза зависания
+            -- Фаза зависания — принудительно показываем канат на каждом тике
             activeHeli:SetFlyPhase(1)
             activeHeli:SetPhaseElapsed(holdElapsed)
             MTFHeli.Sound.CheckPhase("hover", holdElapsed)
+
+            -- За RopeDetachDelay до вылета — отпускаем bodygroup, анимация скроет сама
+            if holdElapsed >= (cfg.HoldTime - cfg.RopeDetachDelay) then
+                if not ropeDetached then
+                    ropeDetached = true
+                    DropRopeSoldier()
+                end
+            else
+                if activeHeli:GetBodygroupCount(3) > 1 then
+                    activeHeli:SetBodygroup(3, 0)
+                end
+            end
         else
-            -- Фаза вылета
+            -- Фаза вылета — канат скрыт
+            if ropeDetached and activeHeli:GetBodygroupCount(3) > 1 then
+                activeHeli:SetBodygroup(3, 1)
+                ropeDetached = false
+            end
             if departStartTime == nil then
                 departStartTime = CurTime()
                 MTFHeli.Sound.ResetPhaseTriggers()
